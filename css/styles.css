@@ -741,3 +741,128 @@ footer {
     bottom: 16px;
     right: 16px;
 }
+
+/* ══ TABS DEL POPUP ══ */
+.ctrl-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+}
+.ctrl-tab {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 7px 16px;
+    background: transparent;
+    color: var(--chrome-dk);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all .15s;
+    text-transform: uppercase;
+}
+.ctrl-tab:hover  { color: var(--text2); border-color: var(--blue); }
+.ctrl-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.ctrl-panel { display: none; }
+.ctrl-panel.active { display: block; }
+
+/* ══ GAMEPAD MAPPER ══ */
+.gpmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 12px;
+}
+.gpmap-device {
+    font-size: 8px;
+    color: var(--cyan);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gpmap-reset-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    padding: 5px 10px;
+    background: transparent;
+    color: var(--chrome-dk);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    transition: all .15s;
+}
+.gpmap-reset-btn:hover { color: var(--red2); border-color: var(--red); }
+
+.gpmap-hint {
+    font-size: 8px;
+    color: var(--chrome-dk);
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+.gpmap-hint strong { color: var(--blue2); }
+
+.gpmap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.gpmap-list::-webkit-scrollbar { width: 4px; }
+.gpmap-list::-webkit-scrollbar-track { background: var(--panel2); }
+.gpmap-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.gpmap-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(30,42,58,0.5);
+    transition: background .15s;
+}
+.gpmap-row.gpmap-listening {
+    background: rgba(0,102,255,0.08);
+    border-color: var(--blue);
+}
+.gpmap-action {
+    font-size: 10px;
+    color: var(--text2);
+}
+.gpmap-btn {
+    font-size: 9px;
+    color: var(--cyan);
+    min-width: 80px;
+    text-align: center;
+    padding: 3px 8px;
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+}
+.gpmap-listening .gpmap-btn {
+    color: var(--yellow);
+    border-color: var(--yellow);
+    animation: blink .6s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.gpmap-set {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    padding: 4px 10px;
+    background: transparent;
+    color: var(--blue2);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all .12s;
+    white-space: nowrap;
+}
+.gpmap-set:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+.gpmap-listening .gpmap-set { color: var(--red2); border-color: var(--red); }
