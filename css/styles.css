@@ -1,0 +1,293 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+
+/* ════════ PALETA SEGA MEGA DRIVE ════════ */
+:root {
+    --bg:        #0a0c10;
+    --panel:     #10141c;
+    --panel2:    #161b26;
+    --border:    #1e2a3a;
+    --border2:   #2a3a52;
+    --blue:      #0066ff;
+    --blue2:     #3388ff;
+    --blue-glow: rgba(0,102,255,0.55);
+    --blue-dim:  rgba(0,102,255,0.10);
+    --red:       #cc2200;
+    --red2:      #ff3311;
+    --red-glow:  rgba(204,34,0,0.5);
+    --chrome-dk: #546e7a;
+    --chrome2:   #cfd8dc;
+    --yellow:    #ffcc00;
+    --cyan:      #00e5ff;
+    --text2:     #c8d8e8;
+    --white:     #ffffff;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    background: var(--bg);
+    background-image: repeating-linear-gradient(180deg,
+        transparent 0px, transparent 2px,
+        rgba(0,102,255,0.018) 2px, rgba(0,102,255,0.018) 3px);
+    color: #8fa8c0;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 10px 48px;
+}
+
+/* ══ HEADER ══ */
+header { text-align:center; margin-bottom:28px; }
+
+.logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(22px,5vw,38px);
+    color: var(--white);
+    letter-spacing: 6px;
+    text-shadow:
+        0 0 24px var(--blue-glow),
+        0 0 60px rgba(0,102,255,0.25),
+        2px 2px 0 #001a44,
+        4px 4px 0 #000d22;
+}
+.logo span { color: var(--blue2); }
+
+.subtitle {
+    font-size: 10px;
+    color: var(--chrome-dk);
+    letter-spacing: 4px;
+    margin-top: 8px;
+    text-transform: uppercase;
+}
+
+/* ══ CUERPO ══ */
+.console-body {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-top: 3px solid var(--blue);
+    width: 100%;
+    max-width: 800px;
+    padding: 22px;
+    position: relative;
+    box-shadow:
+        0 0 0 1px var(--border),
+        inset 0 1px 0 rgba(255,255,255,0.04),
+        0 20px 60px rgba(0,0,0,0.6),
+        0 0 40px rgba(0,102,255,0.06);
+}
+.console-body::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg,
+        transparent 0px, transparent 4px,
+        rgba(0,0,0,0.07) 4px, rgba(0,0,0,0.07) 5px);
+}
+
+/* ══ PANTALLA ══ */
+.screen-bezel {
+    background: #04060a;
+    border: 1px solid var(--border2);
+    border-bottom: 3px solid #000;
+    padding: 4px;
+    margin-bottom: 18px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.9), 0 0 1px var(--blue-glow);
+    position: relative;
+}
+
+/* screen-wrap tiene altura definida vía aspect-ratio para que
+   tanto splashCanvas como emuContainer sepan cuánto miden */
+.screen-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 320 / 224;
+    background: #000;
+    overflow: hidden;
+}
+
+canvas#splashCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Genesis.js monta aquí — dimensiones 100% garantizadas porque el padre
+   ya tiene tamaño real antes de que se llame embedGenesis() */
+#emuContainer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background: #000;
+}
+
+#emuContainer canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Scanlines */
+.screen-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(180deg,
+        rgba(0,0,0,0) 0px, rgba(0,0,0,0) 1px,
+        rgba(0,0,0,0.18) 1px, rgba(0,0,0,0.18) 2px);
+    pointer-events: none;
+    z-index: 10;
+}
+.screen-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%);
+    pointer-events: none;
+    z-index: 11;
+}
+
+.screen-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 7px; font-weight: 700;
+    color: var(--border2);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* ══ LOADER ══ */
+#loaderOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+#loaderOverlay .spin {
+    width:34px; height:34px;
+    border:3px solid var(--border2);
+    border-top-color:var(--blue);
+    border-radius:50%;
+    animation:spin .75s linear infinite;
+    margin-bottom:12px;
+}
+#loaderOverlay p {
+    font-family:'Orbitron',sans-serif;
+    font-size:7px; font-weight:700;
+    color:var(--blue2); letter-spacing:2px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ══ STATUS BAR ══ */
+.status-bar {
+    display:flex; align-items:center; gap:10px;
+    background:#07090e;
+    border:1px solid var(--border);
+    border-left:3px solid var(--blue);
+    padding:8px 14px; margin-bottom:16px;
+    font-size:10px; letter-spacing:1px;
+}
+.led { width:8px; height:8px; border-radius:50%; background:var(--chrome-dk); flex-shrink:0; transition:all .3s; }
+.led.on  { background:var(--cyan);  box-shadow:0 0 8px var(--cyan),  0 0 16px rgba(0,229,255,0.4); }
+.led.err { background:var(--red);   box-shadow:0 0 8px var(--red),   0 0 16px rgba(204,34,0,0.4); }
+#statusText { flex:1; color:var(--text2); }
+.fps-counter { color:var(--yellow); font-size:9px; margin-left:auto; font-family:'Orbitron',sans-serif; font-weight:700; }
+
+/* ══ ERROR BOX ══ */
+#errorBox {
+    display:none;
+    background:#120500;
+    border:1px solid var(--red);
+    border-left:3px solid var(--red);
+    padding:14px; margin-bottom:16px;
+    font-size:10px; color:#ff6644;
+}
+#errorBox strong {
+    font-family:'Orbitron',sans-serif; font-size:8px; font-weight:700;
+    display:block; margin-bottom:8px; color:var(--red2); letter-spacing:2px;
+}
+#errorBox code {
+    background:#0a0200; padding:4px 8px;
+    display:block; margin-top:8px; font-size:9px;
+    color:var(--cyan); border-left:2px solid var(--cyan);
+}
+
+/* ══ FILE DROP ══ */
+.file-drop {
+    border:2px dashed var(--border2);
+    padding:22px; text-align:center; cursor:pointer;
+    transition:all .2s; margin-bottom:16px;
+    background:rgba(0,102,255,0.02);
+}
+.file-drop:hover, .file-drop.drag {
+    border-color:var(--blue);
+    background:var(--blue-dim);
+    box-shadow:0 0 20px rgba(0,102,255,0.1);
+}
+.file-drop .drop-icon  { font-size:28px; display:block; margin-bottom:8px; }
+.file-drop .drop-title { font-family:'Orbitron',sans-serif; font-size:8px; font-weight:700; color:var(--blue2); display:block; margin-bottom:6px; letter-spacing:2px; }
+.file-drop .drop-sub   { font-size:9px; color:var(--chrome-dk); letter-spacing:1px; }
+.file-drop .rom-name   { font-size:10px; color:var(--cyan); margin-top:8px; display:block; word-break:break-all; }
+#romInput { display:none; }
+
+/* ══ GAMEPAD BAR ══ */
+.gamepad-bar {
+    background:#07090e;
+    border:1px solid var(--border);
+    border-left:3px solid var(--chrome-dk);
+    padding:8px 14px; font-size:9px;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:16px; letter-spacing:1px;
+}
+#gamepadStatus { flex:1; color:var(--chrome-dk); }
+#gamepadStatus.connected { color:var(--cyan); }
+
+/* ══ BOTONES ══ */
+.btn-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+@media(max-width:480px) {
+    .btn-row { grid-template-columns:1fr 1fr; }
+    .btn-row .btn-danger { grid-column:span 2; }
+}
+.btn {
+    font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+    padding:11px 14px; border:none; cursor:pointer;
+    letter-spacing:2px; text-transform:uppercase;
+    transition:all .12s; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.btn-primary  { background:var(--blue); color:#fff; box-shadow:0 4px 0 #002266, 0 0 18px var(--blue-glow); }
+.btn-primary:hover:not(:disabled)  { background:var(--blue2); transform:translateY(-1px); box-shadow:0 5px 0 #002266, 0 0 28px var(--blue-glow); }
+.btn-primary:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 #002266; }
+.btn-secondary { background:var(--panel2); color:var(--chrome2); border:1px solid var(--chrome-dk); box-shadow:0 4px 0 #1a1a1a; }
+.btn-secondary:hover:not(:disabled)  { background:#1e2a3a; color:var(--white); transform:translateY(-1px); }
+.btn-secondary:active:not(:disabled) { transform:translateY(3px); }
+.btn-danger { background:var(--panel2); color:var(--red2); border:1px solid var(--red); box-shadow:0 4px 0 #330600; }
+.btn-danger:hover:not(:disabled)  { background:#1a0600; transform:translateY(-1px); box-shadow:0 5px 0 #330600, 0 0 16px var(--red-glow); }
+.btn-danger:active:not(:disabled) { transform:translateY(3px); }
+.btn:disabled { opacity:.3; cursor:not-allowed; transform:none !important; }
+
+/* ══ KEYMAP ══ */
+.keymap { background:#07090e; border:1px solid var(--border); padding:14px; }
+.keymap-title { font-family:'Orbitron',sans-serif; font-size:7px; font-weight:700; color:var(--blue); letter-spacing:2px; margin-bottom:12px; text-transform:uppercase; }
+.keymap-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:5px 16px; }
+.keymap-item { display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(30,42,58,0.5); }
+.key-action { color:var(--text2); font-size:9px; }
+.key-kbd { background:var(--panel2); color:var(--chrome2); border:1px solid var(--border2); border-bottom:2px solid #000; padding:2px 7px; font-size:8px; font-family:'Orbitron',sans-serif; font-weight:700; min-width:28px; text-align:center; }
+
+footer { margin-top:28px; font-size:8px; color:var(--border2); text-align:center; letter-spacing:2px; text-transform:uppercase; }
