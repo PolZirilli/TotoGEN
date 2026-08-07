@@ -1,7 +1,6 @@
 // ════════════════════════════════════════════
-//  RetroGEN V2 — Motor: Genesis.js (PicoDrive)
-//  API: embedGenesis({ container, name, rom, player1, cbStarted })
-//  Sin WASM, sin CDN, sin iframes — puro JS
+//  TotoGEN — Emulador Sega Mega Drive / Genesis
+//  Motor: Genesis.js (PicoDrive JS puro)
 // ════════════════════════════════════════════
 
 // ══ REFS UI ══
@@ -13,11 +12,11 @@ const statusEl     = document.getElementById('statusText');
 const fpsEl        = document.getElementById('fpsCounter');
 const romNameEl    = document.getElementById('romName');
 const errorBox     = document.getElementById('errorBox');
+const screenWrap   = document.getElementById('screenWrap');
 
 // ══ ESTADO ══
 let emuRunning  = false;
 let paused      = false;
-let lastROMBuf  = null;   // ArrayBuffer — para poder remontar en STOP
 let lastROMName = '';
 let fpsInterval = null;
 let fpsFrames   = 0;
@@ -26,7 +25,17 @@ let fpsLast     = performance.now();
 const TARGET_FPS     = 60;
 const FRAME_DURATION = 1000 / TARGET_FPS;
 
-// ══ SPLASH ══
+// ══ FIX 1: Prevenir scroll de página con teclas de dirección ══
+// Solo cuando el emulador está corriendo para no romper la navegación normal
+window.addEventListener('keydown', function(e) {
+    if (!emuRunning) return;
+    const blocked = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+    if (blocked.includes(e.key)) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// ══ FIX 4: Splash sin título — solo grid de líneas + subtítulo ══
 function drawSplash() {
     const ctx = splash.getContext('2d');
     const w = splash.width, h = splash.height;
@@ -35,19 +44,22 @@ function drawSplash() {
     g.addColorStop(1, '#001a44');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(0,102,255,0.12)';
+
+    // Grid de líneas decorativas
+    ctx.strokeStyle = 'rgba(0,102,255,0.10)';
     ctx.lineWidth = 1;
-    for (let y = 0; y < h; y += 16) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
-    ctx.fillStyle = '#0066ff';
-    ctx.font = 'bold 20px Orbitron, monospace';
+    for (let y = 0; y < h; y += 16) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    for (let x = 0; x < w; x += 32) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+
+    // Solo subtítulo — sin TotoGEN
+    ctx.fillStyle = '#2a3a52';
+    ctx.font = '7px Orbitron, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('RetroGEN', w/2, h/2 - 18);
-    ctx.fillStyle = '#3388ff';
-    ctx.font = '8px Share Tech Mono, monospace';
-    ctx.fillText('SEGA MEGA DRIVE / GENESIS EMULATOR', w/2, h/2 + 6);
-    ctx.fillStyle = '#546e7a';
-    ctx.font = '7px Share Tech Mono, monospace';
-    ctx.fillText('Cargá una ROM  .md / .bin / .gen / .32x', w/2, h/2 + 24);
+    ctx.fillText('LOAD A ROM TO START', w / 2, h / 2);
 }
 
 // ══ UI HELPERS ══
@@ -67,19 +79,19 @@ function showError(msg, hint) {
 }
 function hideError() { errorBox.style.display = 'none'; }
 function showLoader(txt) {
-    document.getElementById('loaderText').textContent = txt || 'CARGANDO...';
+    document.getElementById('loaderText').textContent = txt || 'LOADING...';
     loaderOvrl.style.display = 'flex';
 }
 function hideLoader() { loaderOvrl.style.display = 'none'; }
 
-// ══ FPS COUNTER ══
+// ══ FPS ══
 function startFPS() {
     stopFPS();
     fpsFrames = 0; fpsLast = performance.now();
     fpsInterval = setInterval(() => {
         const now = performance.now(), delta = now - fpsLast;
         if (delta >= 1000) {
-            fpsEl.textContent = Math.min(Math.round((fpsFrames/delta)*1000), 60) + ' FPS';
+            fpsEl.textContent = Math.min(Math.round((fpsFrames / delta) * 1000), 60) + ' FPS';
             fpsFrames = 0; fpsLast = now;
         }
         fpsFrames++;
@@ -91,180 +103,194 @@ function stopFPS() {
 }
 
 // ══ GAMEPAD ══
-let gpPrev = {}, gpAxesPrev = { up:false, down:false, left:false, right:false };
+let gpPrev = {}, gpAxesPrev = { up: false, down: false, left: false, right: false };
 const DEAD = 0.45;
-
-// Genesis.js acepta eventos de teclado nativos — el gamepad lo mapeamos
-// generando keydown/keyup sintéticos con los KeyCodes correctos
 const GP_KEY_MAP = {
-    0:  'KeyS',      // B Mega Drive
-    1:  'KeyW',      // Y
-    2:  'Enter',     // Select → Start (no tiene select)
-    3:  'Enter',     // Start
-    4:  'ArrowUp',
-    5:  'ArrowDown',
-    6:  'ArrowLeft',
-    7:  'ArrowRight',
-    8:  'KeyA',      // A Mega Drive
-    9:  'KeyQ',      // X
-    10: 'KeyD',      // C
-    11: 'KeyZ',      // Mode
+    0: 'KeyS', 1: 'KeyW', 3: 'Enter',
+    4: 'ArrowUp', 5: 'ArrowDown', 6: 'ArrowLeft', 7: 'ArrowRight',
+    8: 'KeyA', 9: 'KeyQ', 10: 'KeyD', 11: 'KeyZ',
 };
-
 function fireKey(code, down) {
-    const type = down ? 'keydown' : 'keyup';
-    document.dispatchEvent(new KeyboardEvent(type, { code, key: code, bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true }));
 }
-
 function pollGamepad() {
     if (!emuRunning || paused) return;
-    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
-    const gp  = [...gps].find(g => g?.connected);
+    const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(g => g?.connected);
     if (!gp) return;
-
     gp.buttons.forEach((btn, i) => {
         const pressed = btn.pressed || btn.value > 0.5;
         const code = GP_KEY_MAP[i];
         if (!code) return;
-        if ( pressed && !gpPrev[i]) fireKey(code, true);
-        if (!pressed &&  gpPrev[i]) fireKey(code, false);
+        if (pressed && !gpPrev[i]) fireKey(code, true);
+        if (!pressed && gpPrev[i]) fireKey(code, false);
         gpPrev[i] = pressed;
     });
-
-    const ax = gp.axes[0]||0, ay = gp.axes[1]||0;
+    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
     const axL = ax < -DEAD, axR = ax > DEAD, axU = ay < -DEAD, axD = ay > DEAD;
-    const axes = [
-        [axL, gpAxesPrev.left,  'ArrowLeft'],
-        [axR, gpAxesPrev.right, 'ArrowRight'],
-        [axU, gpAxesPrev.up,    'ArrowUp'],
-        [axD, gpAxesPrev.down,  'ArrowDown'],
-    ];
-    axes.forEach(([cur, prev, code]) => {
-        if ( cur && !prev) fireKey(code, true);
-        if (!cur &&  prev) fireKey(code, false);
+    [[axL, gpAxesPrev.left, 'ArrowLeft'], [axR, gpAxesPrev.right, 'ArrowRight'],
+     [axU, gpAxesPrev.up, 'ArrowUp'],    [axD, gpAxesPrev.down, 'ArrowDown']
+    ].forEach(([c, p, k]) => {
+        if (c && !p) fireKey(k, true);
+        if (!c && p) fireKey(k, false);
     });
-    gpAxesPrev = { left:axL, right:axR, up:axU, down:axD };
+    gpAxesPrev = { left: axL, right: axR, up: axU, down: axD };
 }
-
 let gpPollInterval = null;
-function startGPPoll() {
-    stopGPPoll();
-    gpPollInterval = setInterval(pollGamepad, FRAME_DURATION);
-}
+function startGPPoll() { stopGPPoll(); gpPollInterval = setInterval(pollGamepad, FRAME_DURATION); }
 function stopGPPoll() {
     if (gpPollInterval) { clearInterval(gpPollInterval); gpPollInterval = null; }
-    gpPrev = {}; gpAxesPrev = { up:false, down:false, left:false, right:false };
+    gpPrev = {}; gpAxesPrev = { up: false, down: false, left: false, right: false };
 }
-
 window.addEventListener('gamepadconnected', e => {
     const el = document.getElementById('gamepadStatus');
-    el.textContent = '🎮 Conectado: ' + e.gamepad.id.substring(0,55);
+    el.textContent = '🎮 Connected: ' + e.gamepad.id.substring(0, 55);
     el.classList.add('connected');
 });
 window.addEventListener('gamepaddisconnected', () => {
     const el = document.getElementById('gamepadStatus');
-    el.textContent = 'Joystick desconectado';
+    el.textContent = 'Gamepad disconnected';
     el.classList.remove('connected');
     stopGPPoll();
 });
 
+// ══ FIX 2: FULLSCREEN ══
+const btnFullscreen = document.getElementById('btnFullscreen');
+
+btnFullscreen.addEventListener('click', toggleFullscreen);
+
+document.addEventListener('fullscreenchange',       updateFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+document.addEventListener('mozfullscreenchange',    updateFullscreenBtn);
+
+function toggleFullscreen() {
+    const el = screenWrap;
+    const isFS = !!(document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.mozFullScreenElement);
+    if (!isFS) {
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+        if (req) req.call(el);
+    } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+        if (exit) exit.call(document);
+    }
+}
+
+function updateFullscreenBtn() {
+    const isFS = !!(document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.mozFullScreenElement);
+    btnFullscreen.textContent = isFS ? '✕' : '⛶';
+    btnFullscreen.title = isFS ? 'Exit Fullscreen' : 'Fullscreen';
+}
+
+// ══ FIX 3: STOP — matar audio correctamente ══
+// Genesis.js crea nodos de AudioContext. Para detenerlos hay que
+// suspender el AudioContext global o cerrar todos los nodos activos.
+function killAudio() {
+    // Cerrar cualquier AudioContext abierto por Genesis.js
+    try {
+        if (window.AudioContext || window.webkitAudioContext) {
+            // Genesis.js expone su contexto en algunos builds como _audioCtx
+            const emuCtx = window._audioCtx || window._genesisAudioCtx;
+            if (emuCtx && emuCtx.state !== 'closed') {
+                emuCtx.close();
+            }
+        }
+    } catch (_) {}
+
+    // Buscar y desconectar nodos de audio activos que Genesis.js dejó en el DOM
+    // a través de AudioContext globales (técnica de último recurso)
+    try {
+        const audioEls = document.querySelectorAll('audio');
+        audioEls.forEach(a => { a.pause(); a.src = ''; a.remove(); });
+    } catch (_) {}
+}
+
 // ══ MONTAR EMULADOR ══
 function mountEmulator(romBuffer, romName) {
     hideError();
-
-    // Verificar que Genesis.js está cargado
     if (typeof embedGenesis === 'undefined') {
-        showError(
-            'Motor no encontrado: js/Genesis.min.js',
-            '→ Descargá Genesis.min.js desde https://github.com/lrusso/Genesis y colocalo en la carpeta js/'
-        );
-        setStatus('Motor no encontrado', 'err');
+        showError('Engine not found: js/Genesis.min.js',
+            '→ Download from: https://github.com/lrusso/Genesis/raw/main/Genesis.min.js');
+        setStatus('Engine not found', 'err');
         return;
     }
-
-    // Desmontar instancia previa si existe
     unmountEmulator(true);
-
-    lastROMBuf  = romBuffer;
     lastROMName = romName;
-
-    // Mostrar contenedor — ANTES de llamar embedGenesis para que
-    // tenga dimensiones reales cuando el motor lea el layout
     splash.style.display       = 'none';
     emuContainer.style.display = 'block';
-    showLoader('CARGANDO ROM...');
-
+    showLoader('LOADING ROM...');
     try {
         embedGenesis({
             container: 'emuContainer',
             name: romName,
             rom: romBuffer,
             player1: {
-                up:    'ArrowUp',
-                down:  'ArrowDown',
-                left:  'ArrowLeft',
-                right: 'ArrowRight',
-                start: 'Enter',
-                mode:  'KeyZ',
-                a:     'KeyA',
-                b:     'KeyS',
-                c:     'KeyD',
-                x:     'KeyQ',
-                y:     'KeyW',
-                z:     'KeyE',
+                up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight',
+                start: 'Enter', mode: 'KeyZ',
+                a: 'KeyA', b: 'KeyS', c: 'KeyD', x: 'KeyQ', y: 'KeyW', z: 'KeyE',
             },
-            cbStarted: function() {
+            cbStarted: function () {
                 hideLoader();
                 emuRunning = true;
                 paused     = false;
                 romNameEl.textContent = '▸ ' + romName;
-                setStatus('Emulando: ' + romName, 'on');
+                setStatus('Playing: ' + romName, 'on');
                 enableButtons(false, true, true);
                 startFPS();
                 startGPPoll();
             }
         });
-    } catch(e) {
+    } catch (e) {
         hideLoader();
         splash.style.display       = 'block';
         emuContainer.style.display = 'none';
-        setStatus('Error al cargar ROM', 'err');
-        showError('No se pudo iniciar el emulador: ' + e.message);
-        console.error('[RetroGEN]', e);
+        setStatus('Error loading ROM', 'err');
+        showError('Could not start emulator: ' + e.message);
     }
 }
 
-// ══ DESMONTAR EMULADOR ══
-// Genesis.js no expone un método destroy() — limpiamos el DOM directamente
+// ══ DESMONTAR ══
 function unmountEmulator(silent) {
     stopFPS();
     stopGPPoll();
     emuRunning = false;
     paused     = false;
 
-    // Vaciar el contenedor — destruye el canvas y detiene el loop interno
+    // FIX 3: matar audio ANTES de vaciar el contenedor
+    killAudio();
+
+    // Vaciar el DOM del emulador — destruye canvas y detiene el loop
     emuContainer.innerHTML = '';
 
     if (!silent) {
+        // Salir de fullscreen si está activo
+        const isFS = !!(document.fullscreenElement ||
+                        document.webkitFullscreenElement ||
+                        document.mozFullScreenElement);
+        if (isFS) {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+            if (exit) exit.call(document);
+        }
+
         splash.style.display       = 'block';
         emuContainer.style.display = 'none';
         romNameEl.textContent = '';
-        lastROMBuf  = null;
         lastROMName = '';
-        setStatus('Detenido — cargá una nueva ROM para continuar', null);
+        setStatus('', null);
         enableButtons(false, false, false);
         hideLoader();
     }
 }
 
-// ══ CARGA DE ROM ══
+// ══ CARGA DE ROM (archivo local) ══
 function handleROMFile(file) {
     if (!file) return;
     hideError();
-    setStatus('Leyendo archivo...', null);
     const reader = new FileReader();
     reader.onload  = ev => mountEmulator(ev.target.result, file.name);
-    reader.onerror = () => { setStatus('Error al leer el archivo', 'err'); showError('No se pudo leer el archivo ROM.'); };
+    reader.onerror = () => showError('Could not read the ROM file.');
     reader.readAsArrayBuffer(file);
 }
 
@@ -281,53 +307,70 @@ drop.addEventListener('drop', e => {
     handleROMFile(e.dataTransfer.files[0]);
 });
 
+// ══ CARGA DE ROM PRESET ══
+document.getElementById('btnLoadPreset').addEventListener('click', () => {
+    const url = document.getElementById('romSelect').value;
+    if (!url) return;
+    hideError();
+    setStatus('Fetching ROM...', null);
+    fetch(url)
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+        .then(buf => mountEmulator(buf, url.split('/').pop()))
+        .catch(err => { showError('Could not load preset ROM.', err.message); setStatus('Load error', 'err'); });
+});
+
 // ══ BOTONES ══
 document.getElementById('btnPause').onclick = () => {
     if (!emuRunning) return;
     if (!paused) {
-        // Genesis.js respeta el foco — quitamos el foco del contenedor para "pausar" input
-        // y mostramos el estado. El loop interno sigue pero sin input.
-        // Para pausa real disparamos Escape que Genesis.js interpreta como menú interno.
         paused = true;
         stopFPS(); stopGPPoll();
         ledEl.className = 'led';
-        setStatus('Pausado — presioná ▶ PLAY para continuar', null);
-        document.getElementById('btnPause').textContent = '⏸ PAUSADO';
+        setStatus('Paused — press ▶ PLAY to continue', null);
+        document.getElementById('btnPause').textContent = '⏸ PAUSED';
         enableButtons(true, false, true);
-        // Disparar pausa interna si Genesis.js la soporta
-        try { emuContainer.querySelector('canvas')?.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })); } catch(_) {}
+        try { emuContainer.querySelector('canvas')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (_) {}
     }
 };
-
 document.getElementById('btnPlay').onclick = () => {
     if (!emuRunning) return;
     if (paused) {
         paused = false;
-        setStatus('Emulando: ' + lastROMName, 'on');
-        document.getElementById('btnPause').textContent = '⏸ PAUSA';
+        setStatus('Playing: ' + lastROMName, 'on');
+        document.getElementById('btnPause').textContent = '⏸ PAUSE';
         enableButtons(false, true, true);
         startFPS(); startGPPoll();
-        try { emuContainer.querySelector('canvas')?.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })); } catch(_) {}
+        try { emuContainer.querySelector('canvas')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (_) {}
     }
 };
+document.getElementById('btnStop').onclick = () => unmountEmulator(false);
 
-document.getElementById('btnStop').onclick = () => {
-    unmountEmulator(false);
-};
+// ══ POPUP DE CONTROLES ══
+const overlay  = document.getElementById('controlsOverlay');
+const btnOpen  = document.getElementById('btnControls');
+const btnClose = document.getElementById('btnControlsClose');
+
+btnOpen.addEventListener('click', () => {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+});
+btnClose.addEventListener('click', closeControls);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeControls(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeControls();
+});
+function closeControls() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+}
 
 // ══ INICIO ══
 (function init() {
     drawSplash();
-
     if (typeof embedGenesis === 'undefined') {
-        setStatus('⚠ Falta js/Genesis.min.js — ver README', 'err');
-        showError(
-            'El motor Genesis.min.js no está en la carpeta js/',
-            '→ Descargalo desde: https://github.com/lrusso/Genesis/raw/main/Genesis.min.js'
-        );
-    } else {
-        setStatus('Listo — cargá una ROM .md / .bin / .gen / .32x para comenzar', null);
+        setStatus('⚠ Missing js/Genesis.min.js — see README', 'err');
+        showError('Genesis.min.js not found in js/ folder.',
+            '→ Download: https://github.com/lrusso/Genesis/raw/main/Genesis.min.js');
     }
-
     enableButtons(false, false, false);
 })();
