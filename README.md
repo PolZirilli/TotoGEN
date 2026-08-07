@@ -1,33 +1,40 @@
-# RetroGEN — Emulador Sega Mega Drive / Genesis
+# TotoGEN — Emulador Sega Mega Drive / Genesis
 
 Engine: **Genesis.js** (PicoDrive transpiled to pure JavaScript — no WebAssembly, no external CDN)
 
+## ⚡ Required before use
+
+Download `Genesis.min.js` and place it in the `js/` folder:
+
 👉 https://github.com/lrusso/Genesis/raw/main/Genesis.min.js
 
-## Formatos de ROM
+```
+TotoGEN/
+├── index.html
+├── css/styles.css
+├── js/
+│   ├── Genesis.min.js   ← download manually
+│   └── app.js
+├── py/servidor.py
+└── README.md
+```
+
+## Usage
+
+Open `index.html` directly (works from `file://`) or via local server:
+```bash
+python3 py/servidor.py
+```
+
+## ROM formats
+
 `.md` · `.bin` · `.gen` · `.smd` · `.32x`
 
-## Controles
-### Teclado
-| Acción | Tecla | | Acción | Tecla |
-|--------|-------|-|--------|-------|
-| D-pad  | ↑↓←→  | | Start  | Enter |
-| Botón A | A    | | Botón B | S    |
-| Botón C | D    | | Botón X | Q    |
-| Botón Y | W    | | Botón Z | E    |
-| Mode    | Z    | | | |
+## Controls
 
-### Atajos internos de Genesis.js
-| Acción | Mac | Windows |
-|--------|-----|---------|
-| Guardar estado | Cmd+1 | Ctrl+1 |
-| Cargar estado  | Cmd+2 | Ctrl+2 |
-| Silenciar      | Cmd+3 | Ctrl+3 |
-| Pantalla completa | Cmd+F | Ctrl+F |
-| Reset          | Cmd+R | Ctrl+R |
+See the **Ver Controles** button inside the app.
 
-## Motor
+## Engine
 
-**Genesis.js** por lrusso — PicoDrive transpilado a JavaScript pre-ES2015.
+**Genesis.js** by lrusso — PicoDrive transpiled to pre-ES2015 JavaScript.
 - Repo: https://github.com/lrusso/Genesis
-- Soporta ROMs de Sega Genesis, Mega Drive y 32X
