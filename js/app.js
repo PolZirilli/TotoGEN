@@ -5,7 +5,7 @@
 
 // ══ REFS UI ══
 const splash       = document.getElementById('splashCanvas');
-const emuContainer = document.getElementById('emuContainer');
+let   emuContainer = document.getElementById('emuContainer'); // let porque se reemplaza en cada STOP
 const loaderOvrl   = document.getElementById('loaderOverlay');
 const ledEl        = document.getElementById('led');
 const statusEl     = document.getElementById('statusText');
@@ -21,6 +21,10 @@ let lastROMName = '';
 let fpsInterval = null;
 let fpsFrames   = 0;
 let fpsLast     = performance.now();
+
+// IDs de timers registrados por Genesis.js — los capturamos antes/después de embedGenesis
+let genesisTimerIds = [];
+let genesisRAFIds   = [];
 
 const TARGET_FPS     = 60;
 const FRAME_DURATION = 1000 / TARGET_FPS;
@@ -184,27 +188,19 @@ function updateFullscreenBtn() {
     btnFullscreen.title = isFS ? 'Exit Fullscreen' : 'Fullscreen';
 }
 
-// ══ FIX 3: STOP — matar audio correctamente ══
-// Genesis.js crea nodos de AudioContext. Para detenerlos hay que
-// suspender el AudioContext global o cerrar todos los nodos activos.
+// ══ MATAR AUDIO ══
 function killAudio() {
-    // Cerrar cualquier AudioContext abierto por Genesis.js
-    try {
-        if (window.AudioContext || window.webkitAudioContext) {
-            // Genesis.js expone su contexto en algunos builds como _audioCtx
-            const emuCtx = window._audioCtx || window._genesisAudioCtx;
-            if (emuCtx && emuCtx.state !== 'closed') {
-                emuCtx.close();
-            }
-        }
-    } catch (_) {}
-
-    // Buscar y desconectar nodos de audio activos que Genesis.js dejó en el DOM
-    // a través de AudioContext globales (técnica de último recurso)
     try {
         const audioEls = document.querySelectorAll('audio');
         audioEls.forEach(a => { a.pause(); a.src = ''; a.remove(); });
     } catch (_) {}
+
+    // Cerrar AudioContext global si Genesis.js lo dejó expuesto
+    ['_audioCtx', '_genesisAudioCtx', 'genesisAudioCtx'].forEach(k => {
+        try {
+            if (window[k] && window[k].state !== 'closed') window[k].close();
+        } catch (_) {}
+    });
 }
 
 // ══ MONTAR EMULADOR ══
@@ -221,6 +217,13 @@ function mountEmulator(romBuffer, romName) {
     splash.style.display       = 'none';
     emuContainer.style.display = 'block';
     showLoader('LOADING ROM...');
+
+    // Capturar el ID de timer más alto ANTES de que Genesis.js registre los suyos
+    const timerBaseline = setTimeout(() => {}, 0);
+    clearTimeout(timerBaseline);
+    const rafBaseline = requestAnimationFrame(() => {});
+    cancelAnimationFrame(rafBaseline);
+
     try {
         embedGenesis({
             container: 'emuContainer',
@@ -232,6 +235,18 @@ function mountEmulator(romBuffer, romName) {
                 a: 'KeyA', b: 'KeyS', c: 'KeyD', x: 'KeyQ', y: 'KeyW', z: 'KeyE',
             },
             cbStarted: function () {
+                // Capturar el rango de IDs que Genesis.js registró
+                const timerCeil = setTimeout(() => {}, 0);
+                clearTimeout(timerCeil);
+                const rafCeil = requestAnimationFrame(() => {});
+                cancelAnimationFrame(rafCeil);
+
+                // Guardar todos los IDs en el rango para cancelarlos en STOP
+                genesisTimerIds = [];
+                for (let i = timerBaseline; i <= timerCeil; i++) genesisTimerIds.push(i);
+                genesisRAFIds = [];
+                for (let i = rafBaseline; i <= rafCeil; i++) genesisRAFIds.push(i);
+
                 hideLoader();
                 emuRunning = true;
                 paused     = false;
@@ -251,21 +266,33 @@ function mountEmulator(romBuffer, romName) {
     }
 }
 
-// ══ DESMONTAR ══
+// ══ DESMONTAR — fix definitivo ══
 function unmountEmulator(silent) {
     stopFPS();
     stopGPPoll();
     emuRunning = false;
     paused     = false;
 
-    // FIX 3: matar audio ANTES de vaciar el contenedor
+    // 1. Cancelar TODOS los timers y RAFs que Genesis.js registró
+    genesisTimerIds.forEach(id => { clearTimeout(id); clearInterval(id); });
+    genesisRAFIds.forEach(id => cancelAnimationFrame(id));
+    genesisTimerIds = [];
+    genesisRAFIds   = [];
+
+    // 2. Matar audio
     killAudio();
 
-    // Vaciar el DOM del emulador — destruye canvas y detiene el loop
-    emuContainer.innerHTML = '';
+    // 3. Reemplazar el div contenedor por uno nuevo limpio
+    //    (destruye todas las referencias internas que Genesis.js tenga al nodo)
+    const parent  = emuContainer.parentNode;
+    const newDiv  = document.createElement('div');
+    newDiv.id     = 'emuContainer';
+    newDiv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:none;background:#000;';
+    parent.replaceChild(newDiv, emuContainer);
+    emuContainer = newDiv;   // actualizar la referencia global
 
     if (!silent) {
-        // Salir de fullscreen si está activo
+        // 4. Salir de fullscreen si corresponde
         const isFS = !!(document.fullscreenElement ||
                         document.webkitFullscreenElement ||
                         document.mozFullScreenElement);
@@ -274,8 +301,7 @@ function unmountEmulator(silent) {
             if (exit) exit.call(document);
         }
 
-        splash.style.display       = 'block';
-        emuContainer.style.display = 'none';
+        splash.style.display = 'block';
         romNameEl.textContent = '';
         lastROMName = '';
         setStatus('', null);
