@@ -3,15 +3,6 @@
 Engine: Genesis.js** (PicoDrive transpiled to pure JavaScript — no WebAssembly, no external CDN)
 👉 https://github.com/lrusso/Genesis/raw/main/Genesis.min.js
 
-TotoGEN/
-├── index.html
-├── css/styles.css
-├── js/
-│   ├── Genesis.min.js   ← download manually
-│   └── app.js
-├── py/servidor.py
-└── README.md
-
 ## ROM formats
 `.md` · `.bin` · `.gen` · `.smd` · `.32x`
 
