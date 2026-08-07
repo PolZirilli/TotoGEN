@@ -15,7 +15,6 @@
 
   <div class="console-body">
 
-    <!-- PANTALLA -->
     <div class="screen-bezel">
       <div class="screen-wrap" id="screenWrap">
         <canvas id="splashCanvas" width="320" height="224"></canvas>
@@ -24,27 +23,23 @@
           <div class="spin"></div>
           <p id="loaderText">LOADING ROM...</p>
         </div>
-        <!-- Botón fullscreen sobre la esquina de la pantalla -->
         <button class="btn-fullscreen" id="btnFullscreen" title="Fullscreen">⛶</button>
       </div>
       <div class="screen-label">MEGA DRIVE / GENESIS · 60Hz · NTSC</div>
     </div>
 
-    <!-- STATUS BAR -->
     <div class="status-bar">
       <div class="led" id="led"></div>
       <span id="statusText"></span>
       <span class="fps-counter" id="fpsCounter"></span>
     </div>
 
-    <!-- ERROR BOX -->
     <div id="errorBox">
       <strong>⚠ ERROR</strong>
       <span id="errorMsg"></span>
       <code id="errorHint"></code>
     </div>
 
-    <!-- CARGA DE ROM — dos columnas -->
     <div class="rom-row">
       <div class="file-drop" id="fileDrop">
         <span class="drop-icon">🎮</span>
@@ -65,20 +60,17 @@
       </div>
     </div>
 
-    <!-- GAMEPAD STATUS -->
     <div class="gamepad-bar">
       <span>🕹️</span>
       <span id="gamepadStatus">Gamepad: not detected — connect a gamepad and press any button</span>
     </div>
 
-    <!-- BOTONES -->
     <div class="btn-row">
       <button class="btn btn-primary"   id="btnPlay"  disabled>▶ PLAY</button>
       <button class="btn btn-secondary" id="btnPause" disabled>⏸ PAUSE</button>
       <button class="btn btn-danger"    id="btnStop"  disabled>⏹ STOP</button>
     </div>
 
-    <!-- BOTÓN VER CONTROLES -->
     <button class="btn-controls-toggle" id="btnControls">◈ Ver Controles</button>
 
   </div>
@@ -86,34 +78,56 @@
   <!-- POPUP DE CONTROLES -->
   <div id="controlsOverlay" class="controls-overlay" aria-hidden="true">
     <div class="controls-popup">
+
       <div class="controls-popup-header">
-        <span>◈ CONTROLES — MEGA DRIVE 6 BOTONES</span>
+        <span>◈ CONTROLS</span>
         <button class="controls-close" id="btnControlsClose">✕</button>
       </div>
-      <div class="keymap-grid">
-        <div class="keymap-item"><span class="key-action">Up</span>      <span class="key-kbd">↑</span></div>
-        <div class="keymap-item"><span class="key-action">Down</span>    <span class="key-kbd">↓</span></div>
-        <div class="keymap-item"><span class="key-action">Left</span>    <span class="key-kbd">←</span></div>
-        <div class="keymap-item"><span class="key-action">Right</span>   <span class="key-kbd">→</span></div>
-        <div class="keymap-item"><span class="key-action">Button A</span><span class="key-kbd">A</span></div>
-        <div class="keymap-item"><span class="key-action">Button B</span><span class="key-kbd">S</span></div>
-        <div class="keymap-item"><span class="key-action">Button C</span><span class="key-kbd">D</span></div>
-        <div class="keymap-item"><span class="key-action">Button X</span><span class="key-kbd">Q</span></div>
-        <div class="keymap-item"><span class="key-action">Button Y</span><span class="key-kbd">W</span></div>
-        <div class="keymap-item"><span class="key-action">Button Z</span><span class="key-kbd">E</span></div>
-        <div class="keymap-item"><span class="key-action">Start</span>   <span class="key-kbd">↵</span></div>
-        <div class="keymap-item"><span class="key-action">Mode</span>    <span class="key-kbd">Z</span></div>
+
+      <!-- TABS -->
+      <div class="ctrl-tabs">
+        <button class="ctrl-tab active" data-panel="panelKeyboard">⌨ Keyboard</button>
+        <button class="ctrl-tab"        data-panel="panelGamepad">🎮 Gamepad</button>
       </div>
-      <div class="controls-shortcuts">
-        <div class="shortcut-title">Internal shortcuts (Genesis.js)</div>
-        <div class="shortcut-grid">
-          <span>Save state</span><span>Ctrl/Cmd + 1</span>
-          <span>Load state</span><span>Ctrl/Cmd + 2</span>
-          <span>Mute</span>     <span>Ctrl/Cmd + 3</span>
-          <span>Fullscreen</span><span>Ctrl/Cmd + F</span>
-          <span>Reset</span>   <span>Ctrl/Cmd + R</span>
+
+      <!-- PANEL KEYBOARD -->
+      <div class="ctrl-panel active" id="panelKeyboard">
+        <div class="keymap-grid">
+          <div class="keymap-item"><span class="key-action">Up</span>      <span class="key-kbd">↑</span></div>
+          <div class="keymap-item"><span class="key-action">Down</span>    <span class="key-kbd">↓</span></div>
+          <div class="keymap-item"><span class="key-action">Left</span>    <span class="key-kbd">←</span></div>
+          <div class="keymap-item"><span class="key-action">Right</span>   <span class="key-kbd">→</span></div>
+          <div class="keymap-item"><span class="key-action">Button A</span><span class="key-kbd">A</span></div>
+          <div class="keymap-item"><span class="key-action">Button B</span><span class="key-kbd">S</span></div>
+          <div class="keymap-item"><span class="key-action">Button C</span><span class="key-kbd">D</span></div>
+          <div class="keymap-item"><span class="key-action">Button X</span><span class="key-kbd">Q</span></div>
+          <div class="keymap-item"><span class="key-action">Button Y</span><span class="key-kbd">W</span></div>
+          <div class="keymap-item"><span class="key-action">Button Z</span><span class="key-kbd">E</span></div>
+          <div class="keymap-item"><span class="key-action">Start</span>   <span class="key-kbd">↵</span></div>
+          <div class="keymap-item"><span class="key-action">Mode</span>    <span class="key-kbd">Z</span></div>
+        </div>
+        <div class="controls-shortcuts">
+          <div class="shortcut-title">Internal shortcuts (Genesis.js)</div>
+          <div class="shortcut-grid">
+            <span>Save state</span><span>Ctrl/Cmd + 1</span>
+            <span>Load state</span><span>Ctrl/Cmd + 2</span>
+            <span>Mute</span>     <span>Ctrl/Cmd + 3</span>
+            <span>Fullscreen</span><span>Ctrl/Cmd + F</span>
+            <span>Reset</span>   <span>Ctrl/Cmd + R</span>
+          </div>
         </div>
       </div>
+
+      <!-- PANEL GAMEPAD -->
+      <div class="ctrl-panel" id="panelGamepad">
+        <div class="gpmap-header">
+          <span id="gpName" class="gpmap-device">No gamepad connected</span>
+          <button class="gpmap-reset-btn" id="btnGPReset">↺ Reset defaults</button>
+        </div>
+        <div class="gpmap-hint">Press <strong>Set</strong> next to an action, then press the physical button on your gamepad.</div>
+        <div id="gpMapList" class="gpmap-list"></div>
+      </div>
+
     </div>
   </div>
 
